@@ -1,10 +1,14 @@
 FROM php:8.2-apache
 
-# 安装必要的 PHP 扩展
-RUN docker-php-ext-install pdo pdo_mysql mysqli
+# 安装系统依赖
+RUN apt-get update && apt-get install -y libsodium-dev && rm -rf /var/lib/apt/lists/*
 
-# 启用 Apache rewrite 模块
-RUN a2enmod rewrite
+# 安装 PHP 扩展（pdo_mysql + sodium）
+RUN docker-php-ext-install pdo pdo_mysql mysqli sodium
+
+# 启用 Apache rewrite 模块 + 允许 .htaccess
+RUN a2enmod rewrite && \
+    sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
 
 # 修改 Apache 监听 8080 端口
 RUN sed -i 's/Listen 80/Listen 8080/' /etc/apache2/ports.conf && \
