@@ -5,10 +5,19 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/commerce.php';
 
 $action = requestValue('action', '');
+$pdo = getDB();
+
+// 从数据库读取 OAuth 配置，兜底用常量
+$oauthClientId = commerceGetSetting($pdo, 'oauth_client_id');
+$oauthClientSecret = commerceGetSetting($pdo, 'oauth_client_secret');
+$oauthRedirectUri = commerceGetSetting($pdo, 'oauth_redirect_uri');
+if ($oauthClientId === '' && defined('LINUXDO_CLIENT_ID')) $oauthClientId = LINUXDO_CLIENT_ID;
+if ($oauthClientSecret === '' && defined('LINUXDO_CLIENT_SECRET')) $oauthClientSecret = LINUXDO_CLIENT_SECRET;
+if ($oauthRedirectUri === '' && defined('LINUXDO_REDIRECT_URI')) $oauthRedirectUri = LINUXDO_REDIRECT_URI;
 
 switch ($action) {
     case 'login':
-        if (empty(LINUXDO_CLIENT_ID) || empty(LINUXDO_REDIRECT_URI)) {
+        if (empty($oauthClientId) || empty($oauthRedirectUri)) {
             exit('OAuth2配置未完成，请联系管理员');
         }
         try {
@@ -18,8 +27,8 @@ switch ($action) {
         }
         $_SESSION['oauth_state'] = $state;
         $params = http_build_query([
-            'client_id' => LINUXDO_CLIENT_ID,
-            'redirect_uri' => LINUXDO_REDIRECT_URI,
+            'client_id' => $oauthClientId,
+            'redirect_uri' => $oauthRedirectUri,
             'response_type' => 'code',
             'scope' => 'user',
             'state' => $state
@@ -61,7 +70,7 @@ switch ($action) {
         break;
 
     case 'check':
-        $configured = !empty(LINUXDO_CLIENT_ID) && !empty(LINUXDO_CLIENT_SECRET) && !empty(LINUXDO_REDIRECT_URI);
+        $configured = !empty($oauthClientId) && !empty($oauthClientSecret) && !empty($oauthRedirectUri);
         jsonResponse(1, '', ['configured' => $configured]);
         break;
 
@@ -70,11 +79,12 @@ switch ($action) {
 }
 
 function getAccessToken(string $code): ?array {
+    global $oauthClientId, $oauthClientSecret, $oauthRedirectUri;
     $data = [
-        'client_id' => LINUXDO_CLIENT_ID,
-        'client_secret' => LINUXDO_CLIENT_SECRET,
+        'client_id' => $oauthClientId,
+        'client_secret' => $oauthClientSecret,
         'code' => $code,
-        'redirect_uri' => LINUXDO_REDIRECT_URI,
+        'redirect_uri' => $oauthRedirectUri,
         'grant_type' => 'authorization_code'
     ];
 
