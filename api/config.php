@@ -50,13 +50,12 @@ define('ADMIN_RECOVERY_ENABLED', filter_var(getenv('ADMIN_RECOVERY_ENABLED') ?: 
 define('ADMIN_RECOVERY_KEY', getenv('ADMIN_RECOVERY_KEY') ?: '');
 
 // Linux DO Connect OAuth2 配置
-// 请在 https://connect.linux.do 申请接入后填写以下信息
-define('LINUXDO_CLIENT_ID', '');
-define('LINUXDO_CLIENT_SECRET', '');
-define('LINUXDO_REDIRECT_URI', '');
+// 优先从环境变量读取，Zeabur 面板设置后不会因代码更新丢失
+if (!defined('LINUXDO_CLIENT_ID')) define('LINUXDO_CLIENT_ID', getenv('LINUXDO_CLIENT_ID') ?: '');
+if (!defined('LINUXDO_CLIENT_SECRET')) define('LINUXDO_CLIENT_SECRET', getenv('LINUXDO_CLIENT_SECRET') ?: '');
+if (!defined('LINUXDO_REDIRECT_URI')) define('LINUXDO_REDIRECT_URI', getenv('LINUXDO_REDIRECT_URI') ?: '');
 
 // Linux DO OAuth2 端点
 define('LINUXDO_AUTH_URL', 'https://connect.linux.do/oauth2/authorize');
 define('LINUXDO_TOKEN_URL', 'https://connect.linux.do/oauth2/token');
 define('LINUXDO_USER_URL', 'https://connect.linux.do/api/user');
-
