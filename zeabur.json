@@ -1,0 +1,12 @@
+{
+  "build": {
+    "php": "8.2",
+    "mysql": true
+  },
+  "env": {
+    "DATABASE_URL": {
+      "description": "MySQL 连接字符串，Zeabur MySQL 服务会自动注入",
+      "required": false
+    }
+  }
+}
