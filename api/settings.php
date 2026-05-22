@@ -65,7 +65,6 @@ try {
 
         case 'get_oauth':
             checkAdmin($pdo);
-            // 优先从数据库读取，兜底用常量（兼容旧配置）
             $clientId = commerceGetSetting($pdo, 'oauth_client_id');
             $clientSecret = commerceGetSetting($pdo, 'oauth_client_secret');
             $redirectUri = commerceGetSetting($pdo, 'oauth_redirect_uri');
@@ -85,7 +84,6 @@ try {
             $clientSecret = normalizeString(requestValue('client_secret', ''), 200);
             $redirectUri = normalizeString(requestValue('redirect_uri', ''), 500);
 
-            // 保存到数据库
             saveSetting($pdo, 'oauth_client_id', $clientId);
             saveSetting($pdo, 'oauth_client_secret', $clientSecret);
             saveSetting($pdo, 'oauth_redirect_uri', $redirectUri);
@@ -114,3 +112,50 @@ try {
             logAudit($pdo, 'settings.save_smtp', ['host' => requestValue('smtp_host', '')]);
             jsonResponse(1, 'SMTP配置保存成功');
             break;
+
+        case 'get_notification':
+            checkAdmin($pdo);
+            jsonResponse(1, '', [
+                'notification_email_enabled' => commerceGetSetting($pdo, 'notification_email_enabled', '0'),
+                'notification_webhook_enabled' => commerceGetSetting($pdo, 'notification_webhook_enabled', '0'),
+                'notification_webhook_url' => commerceGetSetting($pdo, 'notification_webhook_url', ''),
+                'linuxdo_silenced_order_mode' => commerceGetSetting($pdo, 'linuxdo_silenced_order_mode', 'review'),
+            ]);
+            break;
+
+        case 'save_notification':
+            checkAdmin($pdo);
+            $items = [
+                'notification_email_enabled' => (string)(validateInt(requestValue('notification_email_enabled', 0), 0, 1) ?? 0),
+                'notification_webhook_enabled' => (string)(validateInt(requestValue('notification_webhook_enabled', 0), 0, 1) ?? 0),
+                'notification_webhook_url' => normalizeString(requestValue('notification_webhook_url', ''), 500),
+                'linuxdo_silenced_order_mode' => in_array(requestValue('linuxdo_silenced_order_mode', 'review'), ['review', 'block'], true) ? requestValue('linuxdo_silenced_order_mode', 'review') : 'review',
+            ];
+            foreach ($items as $key => $value) {
+                saveSetting($pdo, $key, $value);
+            }
+            logAudit($pdo, 'settings.save_notification', $items);
+            jsonResponse(1, '通知配置保存成功');
+            break;
+
+        case 'test_smtp':
+            checkAdmin($pdo);
+            $email = normalizeString(requestValue('email', ''), 100);
+            if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                jsonResponse(0, '请输入有效的邮箱地址');
+            }
+            $subject = (defined('SITE_NAME') ? SITE_NAME : 'VPS商城') . ' - SMTP测试';
+            $body = '<div style="font-family:Arial,sans-serif;padding:20px"><h2>SMTP配置测试成功</h2><p>如果您收到这封邮件，说明SMTP配置正确。</p><p style="color:#666">发送时间：' . date('Y-m-d H:i:s') . '</p></div>';
+            if (sendSmtpEmail($pdo, $email, $subject, $body)) {
+                jsonResponse(1, '测试邮件已发送到' . $email);
+            }
+            jsonResponse(0, '发送失败，请检查SMTP配置');
+            break;
+
+        default:
+            jsonResponse(0, '未知操作');
+    }
+} catch (Throwable $e) {
+    logError($pdo, 'api.settings', $e->getMessage());
+    jsonResponse(0, '服务器错误');
+}
