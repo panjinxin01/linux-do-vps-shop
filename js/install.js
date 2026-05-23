@@ -59,6 +59,79 @@ function fetchInstallState() {
         .then(function(res) { return res && res.data ? res.data : {}; });
 }
 
+// ── DSN 解析：前端本地降级方案（浏览器 URL API） ──
+function parseDsnLocally(dsn) {
+    var result = { db_host: 'localhost', db_port: '3306', db_user: 'root', db_pass: '', db_name: 'vps_shop' };
+    if (!dsn) return result;
+    try {
+        var url = new URL(dsn);
+        if (url.protocol !== 'mysql:' && url.protocol !== 'mysql:') return result;
+        result.db_host = url.hostname || 'localhost';
+        result.db_port = url.port || '3306';
+        result.db_user = decodeURIComponent(url.username) || 'root';
+        result.db_pass = decodeURIComponent(url.password) || '';
+        result.db_name = url.pathname ? url.pathname.replace(/^\//, '').replace(/\/.*$/, '') : 'vps_shop';
+    } catch (e) { /* 降级失败，返回默认值 */ }
+    return result;
+}
+
+// ── DSN 解析按钮 ──
+function parseDsn() {
+    clearMsg('step1Msg');
+    var dsn = $('dbDsn').value.trim();
+    if (!dsn) {
+        showMsg('step1Msg', '请先粘贴 MySQL 连接字符串', 'error');
+        return;
+    }
+    var btn = $('btnParseDsn');
+    setLoading(btn, true);
+
+    // 优先调用后端 API 解析
+    postApi('parse_dsn', { dsn: dsn }).then(function(res) {
+        setLoading(btn, false);
+        if (res.code === 1 && res.data) {
+            applyDsnResult(res.data);
+            showMsg('step1Msg', 'DSN 解析成功，已自动填充表单', 'success');
+        } else {
+            // 后端失败，尝试本地解析
+            var local = parseDsnLocally(dsn);
+            applyDsnResult(local);
+            showMsg('step1Msg', res.msg || '解析完成（本地模式）', local.db_host !== 'localhost' ? 'success' : 'warning');
+        }
+    }).catch(function() {
+        setLoading(btn, false);
+        // 网络错误，降级到本地解析
+        var local = parseDsnLocally(dsn);
+        applyDsnResult(local);
+        showMsg('step1Msg', '网络请求失败，已使用本地解析填充', local.db_host !== 'localhost' ? 'success' : 'warning');
+    });
+}
+
+function applyDsnResult(d) {
+    if (!d) return;
+    $('dbHost').value = d.db_host || 'localhost';
+    $('dbPort').value = d.db_port || '3306';
+    $('dbUser').value = d.db_user || 'root';
+    $('dbPass').value = d.db_pass || '';
+    $('dbName').value = d.db_name || 'vps_shop';
+}
+
+// ── 获取表单数据（支持 DSN 优先） ──
+function getDbFormData(includeDsn) {
+    var data = {};
+    var dsn = $('dbDsn').value.trim();
+    if (includeDsn !== false && dsn) {
+        data.db_dsn = dsn;
+    } else {
+        data.db_host = $('dbHost').value;
+        data.db_port = $('dbPort').value;
+        data.db_user = $('dbUser').value;
+        data.db_pass = $('dbPass').value;
+        data.db_name = $('dbName').value;
+    }
+    return data;
+}
+
 // 初始化：加载当前配置
 function init() {
     fetch(API + '?action=get_config')
@@ -83,12 +156,16 @@ function testConnection() {
     var btn = $('btnTest');
     setLoading(btn, true);
 
-    postApi('test_db', {
-        db_host: $('dbHost').value,
-        db_port: $('dbPort').value,
-        db_user: $('dbUser').value,
-        db_pass: $('dbPass').value
-    }).then(function(res) {
+    var data = getDbFormData();
+    // 如果传了 db_dsn，就不需要传统字段了
+    if (!data.db_dsn) {
+        data.db_host = $('dbHost').value;
+        data.db_port = $('dbPort').value;
+        data.db_user = $('dbUser').value;
+        data.db_pass = $('dbPass').value;
+    }
+
+    postApi('test_db', data).then(function(res) {
         setLoading(btn, false);
         showMsg('step1Msg', res.msg, res.code === 1 ? 'success' : 'error');
     }).catch(function() {
@@ -103,13 +180,16 @@ function saveAndNext() {
     var btn = $('btnSave');
     setLoading(btn, true);
 
-    postApi('save_config', {
-        db_host: $('dbHost').value,
-        db_port: $('dbPort').value,
-        db_user: $('dbUser').value,
-        db_pass: $('dbPass').value,
-        db_name: $('dbName').value
-    }).then(function(res) {
+    var data = getDbFormData();
+    if (!data.db_dsn) {
+        data.db_host = $('dbHost').value;
+        data.db_port = $('dbPort').value;
+        data.db_user = $('dbUser').value;
+        data.db_pass = $('dbPass').value;
+        data.db_name = $('dbName').value;
+    }
+
+    postApi('save_config', data).then(function(res) {
         setLoading(btn, false);
         if (res.code === 1) {
             goStep(2);

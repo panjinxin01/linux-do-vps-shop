@@ -21,6 +21,24 @@
         <h1><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-3px;margin-right:4px"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> 数据库配置</h1>
         <p class="subtitle">填写您的 MySQL 数据库连接信息</p><div id="step1Msg" class="msg-box"></div>
 
+        <!-- DSN 快速输入 -->
+        <div class="dsn-section">
+            <div class="dsn-header">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                <span>快速连接（DSN）</span>
+            </div>
+            <p class="dsn-hint">粘贴 MySQL 连接字符串自动解析，适用于 Zeabur 等云平台</p>
+            <div class="dsn-input-row">
+                <input type="text" id="dbDsn" placeholder="mysql://root:password@host:3306/dbname" value="">
+                <button class="btn btn-dsn" id="btnParseDsn" onclick="parseDsn()">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    解析并填充
+                </button>
+            </div>
+        </div>
+
+        <div class="dsn-divider"><span>或手动填写</span></div>
+
         <div class="form-row">
             <div class="form-group">
                 <label>数据库地址</label>
