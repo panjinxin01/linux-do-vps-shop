@@ -50,11 +50,11 @@ function updateAdminUI() {
 }
 
 function init() {
-  loadStats(); loadProducts(); loadOrders(); loadCoupons(); loadSettings(); loadLdcPaySettings(); loadOAuthSettings();
-  loadSmtpSettings(); loadNotificationSettings(); loadCacheStats(); loadTickets(); loadAnnouncements();
-  loadTicketStats(); loadRecentOrders(); loadRecentTickets(); loadAdmins(); loadAuditLogs();
-  loadTemplateList(); loadProductTemplateOptions(); loadCreditAdminUsers(); loadCreditTransactionList();
-  loadCommunityOverview(); loadReportDashboard(); checkDbMissing();
+loadStats(); loadProducts(); loadOrders(); loadCoupons(); loadSettings(); loadLdcPaySettings(); loadOAuthSettings();
+loadSmtpSettings(); loadNotificationSettings(); loadCacheStats(); loadTickets(); loadAnnouncements();
+loadTicketStats(); loadRecentOrders(); loadRecentTickets(); loadAdmins(); loadAuditLogs();
+loadTemplateList(); loadProductTemplateOptions(); loadCreditAdminUsers(); loadCreditTransactionList();
+loadCommunityOverview(); loadReportDashboard(); loadAiSettings(); checkDbMissing();
 }
 
 // ==================== 数据库检测 ====================
@@ -549,7 +549,11 @@ function showAdminTicketDetail(id) {
       composeHtml = `<div class="ticket-reply-compose">
         <textarea id="adminReplyContent" rows="3" placeholder="输入回复内容..."></textarea>
         <div class="ticket-reply-compose-actions">
-          <input type="file" id="adminTicketFile" accept="image/*,.txt,.log,.pdf">
+          <input type="file" id="adminTicketFile" accept="image/*,.txt,.log,.pdf" onchange="handleTicketFileChange(this)">
+          <label for="adminTicketFile" class="ticket-upload-btn" id="adminTicketFileLabel">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:3px"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>选择附件
+          </label>
+          <span class="ticket-file-name" id="adminTicketFileName"></span>
           <button class="btn btn-outline" style="padding:6px 12px;font-size:12px" onclick="uploadTicketAttachment(${t.id})">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:3px"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>上传附件
           </button>
@@ -558,7 +562,10 @@ function showAdminTicketDetail(id) {
     }
 
     document.getElementById("adminTicketBody").innerHTML = headerHtml + refundMeta +
-      `<div class="ticket-replies">${rHtml}</div>` + atHtml + composeHtml;
+      `<div class="ticket-detail-section-divider"></div>` +
+      `<div class="ticket-replies"><div class="ticket-replies-title">回复历史</div>${rHtml}</div>` +
+      `<div class="ticket-detail-section-divider"></div>` + atHtml +
+      (atHtml && composeHtml ? `<div class="ticket-detail-section-divider"></div>` : "") + composeHtml;
 
     // 底部操作按钮
     let fh = `<button class="btn btn-primary" onclick="closeAdminTicketDetail()">关闭</button>`;
@@ -581,10 +588,23 @@ function showAdminTicketDetail(id) {
 }
 function closeAdminTicketDetail() { document.getElementById("ticketDetailModal").classList.remove("show"); }
 function uploadTicketAttachment(tid) {
-  const fi = document.getElementById("adminTicketFile"); if (!fi.files || !fi.files[0]) { alert("请选择文件"); return; }
-  if (fi.files[0].size > 5 * 1024 * 1024) { alert("文件大小不能超过5MB"); return; }
-  const body = new FormData(); body.append("action", "ticket"); body.append("ticket_id", tid); body.append("file", fi.files[0]);
-  apiFetch("../api/upload.php", { method: "POST", body }).then((r) => r.json()).then((d) => { if (d.code === 1) { showToast("附件上传成功"); fi.value = ""; showAdminTicketDetail(tid); } else alert(d.msg || "上传失败"); }).catch(() => alert("上传请求失败"));
+const fi = document.getElementById("adminTicketFile"); if (!fi.files || !fi.files[0]) { alert("请选择文件"); return; }
+if (fi.files[0].size > 5 * 1024 * 1024) { alert("文件大小不能超过5MB"); return; }
+const body = new FormData(); body.append("action", "ticket"); body.append("ticket_id", tid); body.append("file", fi.files[0]);
+apiFetch("../api/upload.php", { method: "POST", body }).then((r) => r.json()).then((d) => { if (d.code === 1) { showToast("附件上传成功"); fi.value = ""; showAdminTicketDetail(tid); } else alert(d.msg || "上传失败"); }).catch(() => alert("上传请求失败"));
+}
+function handleTicketFileChange(input) {
+const label = document.getElementById("adminTicketFileLabel");
+const nameEl = document.getElementById("adminTicketFileName");
+if (input.files && input.files[0]) {
+  label.classList.add("has-file");
+  label.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:3px"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>已选择';
+  nameEl.textContent = input.files[0].name;
+} else {
+  label.classList.remove("has-file");
+  label.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:3px"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>选择附件';
+  nameEl.textContent = "";
+}
 }
 function adminReplyTicket(tid) {
   const c = document.getElementById("adminReplyContent").value.trim(); if (!c) { alert("请输入回复内容"); return; }
@@ -745,12 +765,51 @@ function clearAuditLogs() {
 
 // ==================== 模板管理 ====================
 function loadProductTemplateOptions(selectedId = "") {
-  apiFetch("../api/templates.php?action=list").then((r) => r.json()).then((d) => {
-    const sel = document.getElementById("pTemplate"); if (!sel) return;
-    sel.innerHTML = '<option value="">不使用模板</option>';
-    if (d.code === 1 && Array.isArray(d.data)) d.data.forEach((t) => { sel.innerHTML += `<option value="${t.id}">${escapeHtml(t.name)}</option>`; });
-    if (selectedId !== "") sel.value = String(selectedId);
+apiFetch("../api/templates.php?action=list").then((r) => r.json()).then((d) => {
+const sel = document.getElementById("pTemplate"); if (!sel) return;
+sel.innerHTML = '<option value="">不使用模板</option>';
+if (d.code === 1 && Array.isArray(d.data)) d.data.forEach((t) => { sel.innerHTML += `<option value="${t.id}">${escapeHtml(t.name)}</option>`; });
+if (selectedId !== "") sel.value = String(selectedId);
+// 绑定 onchange 事件（仅一次）
+if (!sel._templateBound) {
+  sel.addEventListener("change", function() {
+    if (this.value) applyTemplateToProductForm(this.value);
+    else resetProductFormFields();
   });
+  sel._templateBound = true;
+}
+// 编辑模式：自动触发填充
+if (selectedId !== "") applyTemplateToProductForm(selectedId);
+});
+}
+function applyTemplateToProductForm(templateId) {
+const t = window.__templateCache ? window.__templateCache[templateId] : null;
+if (!t) return;
+const fieldMap = {pCpu:"cpu",pMem:"memory",pDisk:"disk",pBw:"bandwidth",pRegion:"region",pLineType:"line_type",pOsType:"os_type",pDescription:"description",pExtra:"extra_info"};
+const labelMap = {pCpu:"pCpu",pMem:"pMem",pDisk:"pDisk",pBw:"pBw",pRegion:"pRegion",pLineType:"pLineType",pOsType:"pOsType",pDescription:"pDescription",pExtra:"pExtra"};
+Object.entries(fieldMap).forEach(([elId, key]) => {
+  const el = document.getElementById(elId);
+  const label = el ? el.closest(".form-group")?.querySelector("label") : null;
+  if (t[key] && String(t[key]).trim() !== "") {
+    el.value = t[key];
+    el.classList.add("field-from-template");
+    if (label) label.classList.add("template-indicator");
+  } else {
+    if (el && !el.dataset.manuallyEdited) el.value = "";
+    el.classList.remove("field-from-template");
+    if (label) label.classList.remove("template-indicator");
+  }
+});
+}
+function resetProductFormFields() {
+["pCpu","pMem","pDisk","pBw","pRegion","pLineType","pOsType","pDescription","pExtra"].forEach((id) => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.remove("field-from-template");
+    const label = el.closest(".form-group")?.querySelector("label");
+    if (label) label.classList.remove("template-indicator");
+  }
+});
 }
 function loadTemplateList() {
   apiFetch("../api/templates.php?action=list").then((r) => r.json()).then((d) => {
@@ -777,6 +836,49 @@ function saveTemplate() {
 }
 function deleteTemplate(id) { if (!confirm("确定删除该模板？")) return; const body = new FormData(); body.append("action", "delete"); body.append("id", id); apiFetch("../api/templates.php", { method: "POST", body }).then((r) => r.json()).then((d) => { if (d.code === 1) { showToast("删除成功"); loadTemplateList(); loadProductTemplateOptions(); } else alert(d.msg || "删除失败"); }); }
 function createTemplateFromProductPrompt() { const id = prompt("输入商品ID，快速生成模板"); if (!id) return; const body = new FormData(); body.append("action", "create_from_product"); body.append("product_id", id); apiFetch("../api/templates.php", { method: "POST", body }).then((r) => r.json()).then((d) => { if (d.code === 1) { showToast("已从商品生成模板"); loadTemplateList(); loadProductTemplateOptions(); } else alert(d.msg || "生成失败"); }); }
+
+// ==================== AI 智能生成 ====================
+function openAIGenerate() {
+const desc = prompt("请输入商品描述（如：香港轻量VPS，2核4G，月付100积分）");
+if (!desc || !desc.trim()) return;
+showToast("AI 正在生成商品配置，请稍候...");
+const body = new FormData(); body.append("description", desc.trim());
+apiFetch("../api/ai.php?action=generate_product", { method: "POST", body })
+.then((r) => r.json()).then((data) => {
+  if (data.code === 1 && data.data) {
+    fillProductFormFromAI(data.data);
+    showToast("AI 已生成配置，请检查并修改");
+  } else {
+    alert(data.msg || "AI 生成失败，请检查 API 配置");
+  }
+}).catch(() => alert("网络请求失败，请检查 API 配置"));
+}
+function fillProductFormFromAI(data) {
+if (!data) return;
+const map = {pName:"name",pCpu:"cpu",pMem:"memory",pDisk:"disk",pBw:"bandwidth",pRegion:"region",pLineType:"line_type",pOsType:"os_type",pDescription:"description",pPrice:"price"};
+Object.entries(map).forEach(([elId, key]) => {
+  const el = document.getElementById(elId);
+  if (el && data[key] !== undefined && String(data[key]).trim() !== "") {
+    if (!el.value || el.dataset.manuallyEdited !== "true") el.value = data[key];
+  }
+});
+}
+function loadAiSettings() {
+apiFetch("../api/settings.php?action=get_ai").then((r) => r.json()).then((data) => {
+if (data.code === 1 && data.data) {
+  document.getElementById("cfgAiEndpoint").value = data.data.ai_api_endpoint || "";
+  document.getElementById("cfgAiKey").value = data.data.ai_api_key || "";
+  document.getElementById("cfgAiModel").value = data.data.ai_model || "";
+}
+}).catch(() => {});
+}
+function saveAiSettings() {
+const body = new FormData(); body.append("action", "save_ai");
+body.append("ai_api_endpoint", document.getElementById("cfgAiEndpoint").value);
+body.append("ai_api_key", document.getElementById("cfgAiKey").value);
+body.append("ai_model", document.getElementById("cfgAiModel").value);
+apiFetch("../api/settings.php", { method: "POST", body }).then((r) => r.json()).then((data) => alert(data.msg));
+}
 
 // ==================== 积分管理 ====================
 function loadCreditAdminUsers() {

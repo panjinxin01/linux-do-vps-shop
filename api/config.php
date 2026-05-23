@@ -1,61 +1,54 @@
 <?php
-// 加载私有配置覆盖（config.local.php）
-// 所有在 config.local.php 中定义的常量会覆盖上方默认值
-// 示例：在 config.local.php 中 define('LINUXDO_CLIENT_SECRET', 'xxxx');
-$localConfigFile = __DIR__ . '/config.local.php';
-if (file_exists($localConfigFile)) {
-    $localCfg = (array)(require $localConfigFile);
-    foreach ($localCfg as $k => $v) {
-        if (!defined($k)) define($k, $v);
+/**
+ * 配置加载器
+ *
+ * 同时支持两种使用方式：
+ *   1. 传统 define() 常量（旧代码兼容）：DB_HOST, DB_USER, LINUXDO_CLIENT_ID …
+ *   2. AppConfig 对象（新代码推荐）：AppConfig::getInstance()->dbHost
+ *
+ * 配置优先级（高→低）：
+ *   环境变量 → config.local.php（部署私有配置）→ 内置默认值
+ *
+ * 部署私有配置示例（config.local.php）：
+ *   <?php
+ *   return [
+ *       'DB_HOST' => '127.0.0.1',
+ *       'DB_USER' => 'your_user',
+ *       'DB_PASS' => 'your_pass',
+ *       'DB_NAME' => 'your_db',
+ *       'DATA_ENCRYPTION_KEY' => '你的32位以上加密密钥',
+ *       'ADMIN_RECOVERY_ENABLED' => false,
+ *       'ADMIN_RECOVERY_KEY' => '恢复密钥',
+ *       'LINUXDO_CLIENT_ID' => '',
+ *       'LINUXDO_CLIENT_SECRET' => '',
+ *       'LINUXDO_REDIRECT_URI' => '',
+ *   ];
+ */
+
+// ── 1. 从 config.local.php + 环境变量构建 AppConfig ──
+require_once __DIR__ . '/../includes/AppConfig.php';
+$appConfig = AppConfig::fromEnv(__DIR__ . '/config.local.php');
+
+// ── 2. 定义传统常量（向后兼容） ──
+$defineMap = [
+    'DB_HOST'                => $appConfig->dbHost,
+    'DB_PORT'                => $appConfig->dbPort,
+    'DB_USER'                => $appConfig->dbUser,
+    'DB_PASS'                => $appConfig->dbPass,
+    'DB_NAME'                => $appConfig->dbName,
+    'SITE_NAME'              => $appConfig->siteName,
+    'DATA_ENCRYPTION_KEY'    => $appConfig->dataEncryptionKey,
+    'ADMIN_RECOVERY_ENABLED' => $appConfig->adminRecoveryEnabled,
+    'ADMIN_RECOVERY_KEY'     => $appConfig->adminRecoveryKey,
+    'LINUXDO_CLIENT_ID'      => $appConfig->linuxdoClientId,
+    'LINUXDO_CLIENT_SECRET'  => $appConfig->linuxdoClientSecret,
+    'LINUXDO_REDIRECT_URI'   => $appConfig->linuxdoRedirectUri,
+    'LINUXDO_AUTH_URL'       => $appConfig->linuxdoAuthUrl,
+    'LINUXDO_TOKEN_URL'      => $appConfig->linuxdoTokenUrl,
+    'LINUXDO_USER_URL'       => $appConfig->linuxdoUserUrl,
+];
+foreach ($defineMap as $name => $value) {
+    if (!defined($name)) {
+        define($name, $value);
     }
 }
-
-// 数据库配置 - 请修改为实际配置
-//
-// 优先级：config.local.php > DATABASE_URL (Zeabur) > DB_HOST/DB_PORT/DB_USER/DB_PASS/DB_NAME 环境变量 > 默认值
-// Zeabur 会自动注入 DATABASE_URL=mysql://user:pass@host:port/database，无需手动配置
-
-// 先尝试 DATABASE_URL 环境变量（Zeabur 自动注入）
-$dbUrl = getenv('DATABASE_URL');
-if ($dbUrl && !defined('DB_HOST')) {
-    $parsed = parse_url($dbUrl);
-    if ($parsed && isset($parsed['scheme']) && $parsed['scheme'] === 'mysql') {
-        define('DB_HOST', $parsed['host'] ?? 'localhost');
-        define('DB_PORT', isset($parsed['port']) ? (int)$parsed['port'] : 3306);
-        define('DB_USER', $parsed['user'] ?? 'root');
-        define('DB_PASS', $parsed['pass'] ?? '');
-        define('DB_NAME', isset($parsed['path']) ? trim($parsed['path'], '/') : 'vps_shop');
-    }
-}
-
-// 兜底：逐个读取独立环境变量（仅当未通过上方 DATABASE_URL 定义时）
-if (!defined('DB_HOST')) define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
-if (!defined('DB_PORT')) define('DB_PORT', getenv('DB_PORT') ? (int)getenv('DB_PORT') : 3306);
-if (!defined('DB_USER')) define('DB_USER', getenv('DB_USER') ?: 'root');
-if (!defined('DB_PASS')) define('DB_PASS', getenv('DB_PASS') ?: '');
-if (!defined('DB_NAME')) define('DB_NAME', getenv('DB_NAME') ?: 'vps_shop');
-
-// 站点配置
-define('SITE_NAME', 'VPS积分商城');
-
-// 加密密钥（用于敏感字段加密，请替换为32位以上随机字符串）
-// 示例: openssl rand -base64 32
-define('DATA_ENCRYPTION_KEY', getenv('DATA_ENCRYPTION_KEY') ?: '');
-
-// 管理员恢复模式（仅用于忘记管理员账号时的紧急恢复）
-// 操作位置：项目根目录 /api/config.php
-// 使用方法：临时将 ADMIN_RECOVERY_ENABLED 改为 true，并设置 ADMIN_RECOVERY_KEY；恢复完成后请立即改回 false
-// 示例：define('ADMIN_RECOVERY_ENABLED', true);
-define('ADMIN_RECOVERY_ENABLED', filter_var(getenv('ADMIN_RECOVERY_ENABLED') ?: 'false', FILTER_VALIDATE_BOOLEAN));
-define('ADMIN_RECOVERY_KEY', getenv('ADMIN_RECOVERY_KEY') ?: '');
-
-// Linux DO Connect OAuth2 配置
-// 优先从环境变量读取，Zeabur 面板设置后不会因代码更新丢失
-if (!defined('LINUXDO_CLIENT_ID')) define('LINUXDO_CLIENT_ID', getenv('LINUXDO_CLIENT_ID') ?: '');
-if (!defined('LINUXDO_CLIENT_SECRET')) define('LINUXDO_CLIENT_SECRET', getenv('LINUXDO_CLIENT_SECRET') ?: '');
-if (!defined('LINUXDO_REDIRECT_URI')) define('LINUXDO_REDIRECT_URI', getenv('LINUXDO_REDIRECT_URI') ?: '');
-
-// Linux DO OAuth2 端点
-define('LINUXDO_AUTH_URL', 'https://connect.linux.do/oauth2/authorize');
-define('LINUXDO_TOKEN_URL', 'https://connect.linux.do/oauth2/token');
-define('LINUXDO_USER_URL', 'https://connect.linux.do/api/user');

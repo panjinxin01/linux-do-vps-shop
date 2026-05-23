@@ -59,52 +59,6 @@ function fetchInstallState() {
         .then(function(res) { return res && res.data ? res.data : {}; });
 }
 
-// ===== DSN 解析 =====
-
-/**
- * 解析 MySQL DSN 连接字符串并填充表单
- * 格式: mysql://user:pass@host:port/database
- */
-function parseDsnString(dsn) {
-    try {
-        var url = new URL(dsn);
-        if (url.protocol !== 'mysql:' && url.protocol !== 'mysqls:') {
-            return false;
-        }
-        $('dbHost').value = url.hostname || 'localhost';
-        $('dbPort').value = url.port || '3306';
-        $('dbUser').value = decodeURIComponent(url.username) || 'root';
-        $('dbPass').value = decodeURIComponent(url.password) || '';
-        $('dbName').value = url.pathname.replace(/^\//, '') || '';
-        return true;
-    } catch(e) {
-        return false;
-    }
-}
-
-function parseDsnAndFill() {
-    clearMsg('step1Msg');
-    var dsn = $('dbDsn') ? $('dbDsn').value.trim() : '';
-    if (!dsn) {
-        showMsg('step1Msg', '请先粘贴 MySQL DSN 连接字符串', 'error');
-        return;
-    }
-    if (parseDsnString(dsn)) {
-        showMsg('step1Msg', '解析成功，字段已自动填充，建议先点击「测试连接」验证', 'success');
-    } else {
-        showMsg('step1Msg', 'DSN 格式无效，请使用 mysql://用户:密码@主机:端口/数据库 格式', 'error');
-    }
-}
-
-function toggleManualConfig() {
-    var el = $('manualConfig');
-    if (!el) return;
-    var isHidden = el.style.display === 'none';
-    el.style.display = isHidden ? '' : 'none';
-}
-
-// =====
-
 // 初始化：加载当前配置
 function init() {
     fetch(API + '?action=get_config')

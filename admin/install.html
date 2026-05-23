@@ -19,27 +19,8 @@
     <div class="step-view active" data-step="1">
         <div class="step-label">步骤 1/3</div>
         <h1><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-3px;margin-right:4px"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> 数据库配置</h1>
-        <p class="subtitle">粘贴连接字符串快速配置，或手动填写</p><div id="step1Msg" class="msg-box"></div>
+        <p class="subtitle">填写您的 MySQL 数据库连接信息</p><div id="step1Msg" class="msg-box"></div>
 
-        <!-- DSN 快速输入 -->
-        <div class="dsn-box">
-            <div class="dsn-label">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                快速连接（DSN）
-            </div>
-            <div class="form-group">
-                <input type="text" id="dbDsn" placeholder="mysql://用户:密码@主机:端口/数据库" />
-            </div>
-            <button class="btn btn-primary" style="margin-bottom:16px" onclick="parseDsnAndFill()">解析并填充</button>
-            <div class="dsn-toggle" onclick="toggleManualConfig()">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:3px"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-                手动配置
-            </div>
-        </div>
-
-        <div class="divider"><span>或手动填写</span></div>
-
-        <div id="manualConfig">
         <div class="form-row">
             <div class="form-group">
                 <label>数据库地址</label>
@@ -67,7 +48,6 @@
         <button class="btn btn-outline" id="btnTest" onclick="testConnection()">测试连接</button>
         <button class="btn btn-primary" id="btnSave" onclick="saveAndNext()">保存配置并继续 →</button>
     </div>
-    </div><!-- /manualConfig -->
 
     <!-- 步骤2: 加密密钥 -->
     <div class="step-view" data-step="2">

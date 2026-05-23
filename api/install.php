@@ -73,26 +73,6 @@ function writeConfigFile(array $cfg): bool {
     return $written;
 }
 
-/**
- * 解析 MySQL DSN 连接字符串
- * 格式: mysql://user:pass@host:port/database
- */
-function parseDsn(string $dsn): ?array {
-    $dsn = trim($dsn);
-    if ($dsn === '') return null;
-    $parsed = parse_url($dsn);
-    if (!$parsed || !isset($parsed['scheme']) || $parsed['scheme'] !== 'mysql') {
-        return null;
-    }
-    return [
-        'host' => $parsed['host'] ?? 'localhost',
-        'port' => isset($parsed['port']) ? (int)$parsed['port'] : 3306,
-        'user' => $parsed['user'] ?? 'root',
-        'pass' => $parsed['pass'] ?? '',
-        'name' => isset($parsed['path']) ? trim($parsed['path'], '/') : '',
-    ];
-}
-
 function seedInstallSettings(PDO $pdo): void {
     $stmt = $pdo->prepare('INSERT INTO settings (key_name, key_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE key_value = VALUES(key_value)');
     foreach (getProjectDefaultSettings() as $key => $value) {
@@ -121,23 +101,10 @@ switch ($action) {
         break;
 
     case 'test_db':
-        // 支持 DSN 连接字符串
-        $dsn = trim($_POST['db_dsn'] ?? '');
-        if ($dsn !== '') {
-            $parsed = parseDsn($dsn);
-            if (!$parsed) {
-                jsonOut(0, 'DSN 格式无效，请使用 mysql://user:pass@host:port/database 格式');
-            }
-            $host = $parsed['host'];
-            $port = $parsed['port'];
-            $user = $parsed['user'];
-            $pass = $parsed['pass'];
-        } else {
-            $host = trim($_POST['db_host'] ?? 'localhost');
-            $port = (int)($_POST['db_port'] ?? 3306);
-            $user = trim($_POST['db_user'] ?? '');
-            $pass = $_POST['db_pass'] ?? '';
-        }
+        $host = trim($_POST['db_host'] ?? 'localhost');
+        $port = (int)($_POST['db_port'] ?? 3306);
+        $user = trim($_POST['db_user'] ?? '');
+        $pass = $_POST['db_pass'] ?? '';
 
         if ($host === '' || $user === '') {
             jsonOut(0, '地址和用户名不能为空');
@@ -155,28 +122,14 @@ switch ($action) {
 
     case 'save_config':
         $cfg = getCurrentConfig();
-        // 支持 DSN 连接字符串
-        $dsn = trim($_POST['db_dsn'] ?? '');
-        if ($dsn !== '') {
-            $parsed = parseDsn($dsn);
-            if (!$parsed) {
-                jsonOut(0, 'DSN 格式无效，请使用 mysql://user:pass@host:port/database 格式');
-            }
-            $cfg['DB_HOST'] = $parsed['host'];
-            $cfg['DB_PORT'] = $parsed['port'];
-            $cfg['DB_USER'] = $parsed['user'];
-            $pass = $parsed['pass'];
-            $cfg['DB_NAME'] = $parsed['name'] !== '' ? $parsed['name'] : 'vps_shop';
-        } else {
-            $cfg['DB_HOST'] = trim($_POST['db_host'] ?? 'localhost');
-            $cfg['DB_PORT'] = (int)($_POST['db_port'] ?? 3306);
-            $cfg['DB_USER'] = trim($_POST['db_user'] ?? 'root');
-            $pass = $_POST['db_pass'] ?? '';
-            $cfg['DB_NAME'] = trim($_POST['db_name'] ?? 'vps_shop');
-        }
+        $cfg['DB_HOST'] = trim($_POST['db_host'] ?? 'localhost');
+        $cfg['DB_PORT'] = (int)($_POST['db_port'] ?? 3306);
+        $cfg['DB_USER'] = trim($_POST['db_user'] ?? 'root');
+        $pass = $_POST['db_pass'] ?? '';
         if ($pass !== '' && $pass !== '********') {
             $cfg['DB_PASS'] = $pass;
         }
+        $cfg['DB_NAME'] = trim($_POST['db_name'] ?? 'vps_shop');
 
         if ($cfg['DB_HOST'] === '' || $cfg['DB_USER'] === '' || $cfg['DB_NAME'] === '') {
             jsonOut(0, '地址、用户名、数据库名不能为空');

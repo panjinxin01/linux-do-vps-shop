@@ -1259,7 +1259,7 @@ body.setup-page .auth-card code {
 
 /* === 退款审批卡片 === */
 .refund-admin-card {
-  margin: 0 0 20px;
+  margin: 0 0 24px;
   padding: 20px;
   border: 1px solid rgba(99, 102, 241, 0.22);
   border-radius: 16px;
@@ -1371,4 +1371,107 @@ body.setup-page .auth-card code {
 }
 .admin-inline-actions .btn-danger:hover {
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+
+/* === 模板自动填充样式 === */
+.field-from-template {
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  background: rgba(99, 102, 241, 0.06) !important;
+}
+label.template-indicator::after {
+  content: " (来自模板)";
+  font-size: 10px;
+  color: var(--primary);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+/* === AI 生成按钮 === */
+.btn-ai-generate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.12));
+  color: var(--primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.btn-ai-generate:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(139, 92, 246, 0.22));
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+}
+
+/* === 工单附件上传美化 === */
+.ticket-reply-compose-actions input[type="file"] {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ticket-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.ticket-upload-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.08);
+}
+.ticket-upload-btn.has-file {
+  border-style: solid;
+  border-color: var(--success);
+  color: var(--success);
+  background: rgba(16, 185, 129, 0.08);
+}
+.ticket-file-name {
+  font-size: 11px;
+  color: var(--text-muted);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* === 工单详情区域分隔 === */
+.ticket-detail-section-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}
+.ticket-detail-header {
+  margin-bottom: 8px;
+}
+.ticket-replies-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ticket-replies-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 14px;
+  background: var(--primary);
+  border-radius: 2px;
 }
