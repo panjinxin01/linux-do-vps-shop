@@ -80,11 +80,18 @@ function handleSettingSaveLdcpay(PDO $pdo): void {
     jsonResponse(1, 'LDC Pay 配置保存成功');
 }
 function handleSettingGetOauth(): void {
+    $pdo = getDB();
     checkAdmin($pdo);
+    $clientId = commerceGetSetting($pdo, 'oauth_client_id');
+    $clientSecret = commerceGetSetting($pdo, 'oauth_client_secret');
+    $redirectUri = commerceGetSetting($pdo, 'oauth_redirect_uri');
+    if ($clientId === '' && defined('LINUXDO_CLIENT_ID')) $clientId = LINUXDO_CLIENT_ID;
+    if ($clientSecret === '' && defined('LINUXDO_CLIENT_SECRET')) $clientSecret = LINUXDO_CLIENT_SECRET;
+    if ($redirectUri === '' && defined('LINUXDO_REDIRECT_URI')) $redirectUri = LINUXDO_REDIRECT_URI;
     jsonResponse(1, '', [
-        'client_id' => defined('LINUXDO_CLIENT_ID') ? LINUXDO_CLIENT_ID : '',
-        'client_secret' => defined('LINUXDO_CLIENT_SECRET') ? LINUXDO_CLIENT_SECRET : '',
-        'redirect_uri' => defined('LINUXDO_REDIRECT_URI') ? LINUXDO_REDIRECT_URI : '',
+        'client_id' => $clientId,
+        'client_secret' => $clientSecret,
+        'redirect_uri' => $redirectUri,
     ]);
 }
 function handleSettingSaveOauth(PDO $pdo): void {
@@ -92,28 +99,9 @@ function handleSettingSaveOauth(PDO $pdo): void {
     $clientId = normalizeString(requestValue('client_id', ''), 200);
     $clientSecret = normalizeString(requestValue('client_secret', ''), 200);
     $redirectUri = normalizeString(requestValue('redirect_uri', ''), 500);
-
-    $configPath = __DIR__ . '/config.php';
-    $configContent = (string)file_get_contents($configPath);
-    if ($configContent === '') {
-        jsonResponse(0, '无法读取配置文件');
-    }
-
-    $patterns = [
-        "/define\\('LINUXDO_CLIENT_ID',\\s*'[^']*'\\);/" => "define('LINUXDO_CLIENT_ID', " . var_export($clientId, true) . ");",
-        "/define\\('LINUXDO_CLIENT_SECRET',\\s*'[^']*'\\);/" => "define('LINUXDO_CLIENT_SECRET', " . var_export($clientSecret, true) . ");",
-        "/define\\('LINUXDO_REDIRECT_URI',\\s*'[^']*'\\);/" => "define('LINUXDO_REDIRECT_URI', " . var_export($redirectUri, true) . ");",
-    ];
-    foreach ($patterns as $pattern => $replacement) {
-        $configContent = (string)preg_replace($pattern, $replacement, $configContent);
-    }
-
-    if (file_put_contents($configPath, $configContent, LOCK_EX) === false) {
-        jsonResponse(0, '无法写入配置文件，请检查文件权限');
-    }
-    if (function_exists('opcache_invalidate')) {
-        @opcache_invalidate($configPath, true);
-    }
+    saveSetting($pdo, 'oauth_client_id', $clientId);
+    saveSetting($pdo, 'oauth_client_secret', $clientSecret);
+    saveSetting($pdo, 'oauth_redirect_uri', $redirectUri);
     logAudit($pdo, 'settings.save_oauth', ['client_id_set' => $clientId !== '', 'redirect_uri_set' => $redirectUri !== '']);
     jsonResponse(1, 'OAuth 配置保存成功');
 }
