@@ -87,7 +87,20 @@ readonly class AppConfig {
             }
         }
 
-        // 3) 环境变量覆盖（优先级最高）
+        // 3) DATABASE_URL 环境变量解析（Zeabur 自动注入 mysql://user:pass@host:port/db）
+        $dbUrl = getenv('DATABASE_URL');
+        if ($dbUrl !== false && $dbUrl !== '') {
+            $parsed = parse_url($dbUrl);
+            if ($parsed && isset($parsed['scheme']) && $parsed['scheme'] === 'mysql') {
+                $cfg['DB_HOST'] = $parsed['host'] ?? 'localhost';
+                $cfg['DB_PORT'] = isset($parsed['port']) ? (int)$parsed['port'] : 3306;
+                $cfg['DB_USER'] = isset($parsed['user']) ? urldecode($parsed['user']) : 'root';
+                $cfg['DB_PASS'] = isset($parsed['pass']) ? urldecode($parsed['pass']) : '';
+                $cfg['DB_NAME'] = isset($parsed['path']) ? trim($parsed['path'], '/') : 'vps_shop';
+            }
+        }
+
+        // 4) 独立环境变量覆盖（优先级最高）
         $envMap = [
             'DB_HOST' => 'DB_HOST', 'DB_PORT' => 'DB_PORT', 'DB_USER' => 'DB_USER',
             'DB_PASS' => 'DB_PASS', 'DB_NAME' => 'DB_NAME',
