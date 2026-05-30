@@ -259,6 +259,96 @@ h1 {
   }
 }
 
+/* ── DSN 快速输入 ── */
+.dsn-section {
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 6px;
+}
+.dsn-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #60a5fa;
+  margin-bottom: 6px;
+}
+.dsn-hint {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.dsn-input-row {
+  display: flex;
+  gap: 8px;
+}
+.dsn-input-row input {
+  flex: 1;
+  padding: 10px 14px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #f8fafc;
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  outline: none;
+  transition: border-color 0.2s;
+  min-width: 0;
+}
+.dsn-input-row input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.dsn-input-row input::placeholder {
+  color: #475569;
+  font-family: inherit;
+}
+.btn-dsn {
+  flex-shrink: 0;
+  width: auto;
+  padding: 10px 18px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  transition: background 0.2s;
+}
+.btn-dsn:hover {
+  background: #2563eb;
+}
+.btn-dsn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.dsn-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 18px;
+  color: #475569;
+  font-size: 12px;
+}
+.dsn-divider::before,
+.dsn-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #1e293b;
+}
+.dsn-divider span {
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   body {
     padding: 20px 14px;

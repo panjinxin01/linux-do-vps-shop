@@ -23,10 +23,10 @@ function setLoading(btn, loading) {
     if (!btn) return;
     btn.disabled = loading;
     if (loading) {
-        btn.dataset.origText = btn.textContent;
+        btn.dataset.origHtml = btn.innerHTML;
         btn.innerHTML = '<span class="loading"></span>请稍候...';
     } else {
-        btn.textContent = btn.dataset.origText || '提交';
+        btn.innerHTML = btn.dataset.origHtml || '提交';
     }
 }
 
@@ -65,7 +65,7 @@ function parseDsnLocally(dsn) {
     if (!dsn) return result;
     try {
         var url = new URL(dsn);
-        if (url.protocol !== 'mysql:' && url.protocol !== 'mysql:') return result;
+        if (url.protocol !== 'mysql:') return result;
         result.db_host = url.hostname || 'localhost';
         result.db_port = url.port || '3306';
         result.db_user = decodeURIComponent(url.username) || 'root';
@@ -157,13 +157,6 @@ function testConnection() {
     setLoading(btn, true);
 
     var data = getDbFormData();
-    // 如果传了 db_dsn，就不需要传统字段了
-    if (!data.db_dsn) {
-        data.db_host = $('dbHost').value;
-        data.db_port = $('dbPort').value;
-        data.db_user = $('dbUser').value;
-        data.db_pass = $('dbPass').value;
-    }
 
     postApi('test_db', data).then(function(res) {
         setLoading(btn, false);
@@ -181,13 +174,6 @@ function saveAndNext() {
     setLoading(btn, true);
 
     var data = getDbFormData();
-    if (!data.db_dsn) {
-        data.db_host = $('dbHost').value;
-        data.db_port = $('dbPort').value;
-        data.db_user = $('dbUser').value;
-        data.db_pass = $('dbPass').value;
-        data.db_name = $('dbName').value;
-    }
 
     postApi('save_config', data).then(function(res) {
         setLoading(btn, false);
@@ -256,6 +242,15 @@ function fallbackCopy(text) {
 
 // 步骤2 -> 步骤3
 function goToInstall() {
+    goStep(3);
+}
+
+// 步骤2 -> 步骤3（跳过加密密钥，提示用户）
+function skipAndGoInstall() {
+    var hasKey = $('keyDisplay') && $('keyDisplay').style.display === 'block';
+    if (!hasKey) {
+        showMsg('step2Msg', '未配置加密密钥，VPS 密码将以明文存储。你可以在后续的系统设置中补充配置。', 'warning');
+    }
     goStep(3);
 }
 

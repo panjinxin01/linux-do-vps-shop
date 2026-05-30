@@ -8,8 +8,40 @@ function jsonOut(int $code, string $msg = '', $data = null): void {
     exit;
 }
 
+/**
+ * 解析 MySQL DSN 连接字符串
+ * 支持格式: mysql://user:pass@host:port/dbname?params
+ */
+function parseDsn(string $dsn): array {
+    $result = [
+        'db_host' => 'localhost',
+        'db_port' => 3306,
+        'db_user' => 'root',
+        'db_pass' => '',
+        'db_name' => 'vps_shop',
+    ];
+    $dsn = trim($dsn);
+    if ($dsn === '') {
+        return $result;
+    }
+    $parsed = parse_url($dsn);
+    if (!$parsed || !isset($parsed['scheme']) || $parsed['scheme'] !== 'mysql') {
+        return $result;
+    }
+    $result['db_host'] = $parsed['host'] ?? 'localhost';
+    $result['db_port'] = isset($parsed['port']) ? (int)$parsed['port'] : 3306;
+    $result['db_user'] = isset($parsed['user']) ? urldecode($parsed['user']) : 'root';
+    $result['db_pass'] = isset($parsed['pass']) ? urldecode($parsed['pass']) : '';
+    $result['db_name'] = isset($parsed['path']) ? trim($parsed['path'], '/') : 'vps_shop';
+    return $result;
+}
+
 function getConfigPath(): string {
     return __DIR__ . '/config.php';
+}
+
+function getLocalConfigPath(): string {
+    return __DIR__ . '/config.local.php';
 }
 
 function getCurrentConfig(): array {
@@ -35,35 +67,39 @@ function getCurrentConfig(): array {
     return $defaults;
 }
 
+/**
+ * 将配置写入 config.local.php（而非覆盖框架文件 config.php）
+ *
+ * 读写均使用 return-array 格式，AppConfig::fromEnv() 会自动载入。
+ * 已存在的键（如 OAuth 配置）会被保留合并，不会丢失。
+ */
 function writeConfigFile(array $cfg): bool {
-    $path = getConfigPath();
-    $existingContent = file_exists($path) ? (string)file_get_contents($path) : '';
+    $path = getLocalConfigPath();
 
-    $oauthVars = ['LINUXDO_CLIENT_ID' => '', 'LINUXDO_CLIENT_SECRET' => '', 'LINUXDO_REDIRECT_URI' => ''];
-    foreach ($oauthVars as $key => &$val) {
-        if (preg_match("/define\\('" . preg_quote($key, '/') . "',\\s*'([^']*)'\\)/", $existingContent, $m)) {
-            $val = $m[1];
+    // 读取现有 config.local.php，保留已有配置（如 OAuth）
+    $existing = [];
+    if (file_exists($path)) {
+        $existing = (array)(require $path);
+    }
+
+    // 安装向导可写入的键
+    $installKeys = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASS', 'DB_NAME',
+                    'DATA_ENCRYPTION_KEY', 'ADMIN_RECOVERY_ENABLED', 'ADMIN_RECOVERY_KEY'];
+    foreach ($installKeys as $key) {
+        if (array_key_exists($key, $cfg)) {
+            $existing[$key] = $cfg[$key];
         }
     }
-    unset($val);
 
+    // 确保 SITE_NAME 存在
+    if (!isset($existing['SITE_NAME'])) {
+        $existing['SITE_NAME'] = 'VPS积分商城';
+    }
+
+    // 写入 return-array 格式
     $c = "<?php\n";
-    $c .= "// 数据库配置\n";
-    $c .= "define('DB_HOST', " . var_export((string)$cfg['DB_HOST'], true) . ");\n";
-    $c .= "define('DB_PORT', " . (int)$cfg['DB_PORT'] . ");\n";
-    $c .= "define('DB_USER', " . var_export((string)$cfg['DB_USER'], true) . ");\n";
-    $c .= "define('DB_PASS', " . var_export((string)$cfg['DB_PASS'], true) . ");\n";
-    $c .= "define('DB_NAME', " . var_export((string)$cfg['DB_NAME'], true) . ");\n";
-    $c .= "\ndefine('SITE_NAME', 'VPS积分商城');\n";
-    $c .= "\ndefine('DATA_ENCRYPTION_KEY', " . var_export((string)$cfg['DATA_ENCRYPTION_KEY'], true) . ");\n";
-    $c .= "\ndefine('ADMIN_RECOVERY_ENABLED', " . (!empty($cfg['ADMIN_RECOVERY_ENABLED']) ? 'true' : 'false') . ");\n";
-    $c .= "define('ADMIN_RECOVERY_KEY', " . var_export((string)$cfg['ADMIN_RECOVERY_KEY'], true) . ");\n";
-    $c .= "\ndefine('LINUXDO_CLIENT_ID', " . var_export($oauthVars['LINUXDO_CLIENT_ID'], true) . ");\n";
-    $c .= "define('LINUXDO_CLIENT_SECRET', " . var_export($oauthVars['LINUXDO_CLIENT_SECRET'], true) . ");\n";
-    $c .= "define('LINUXDO_REDIRECT_URI', " . var_export($oauthVars['LINUXDO_REDIRECT_URI'], true) . ");\n";
-    $c .= "\ndefine('LINUXDO_AUTH_URL', 'https://connect.linux.do/oauth2/authorize');\n";
-    $c .= "define('LINUXDO_TOKEN_URL', 'https://connect.linux.do/oauth2/token');\n";
-    $c .= "define('LINUXDO_USER_URL', 'https://connect.linux.do/api/user');\n";
+    $c .= "// 部署私有配置（由安装向导自动生成，config.php 引导加载器会自动载入本文件）\n";
+    $c .= "return " . var_export($existing, true) . ";\n";
 
     $written = file_put_contents($path, $c) !== false;
     clearstatcache(true, $path);
@@ -100,11 +136,29 @@ switch ($action) {
         jsonOut(1, '', $cfg);
         break;
 
+    case 'parse_dsn':
+        $dsn = trim($_POST['dsn'] ?? '');
+        if ($dsn === '') {
+            jsonOut(0, 'DSN 连接字符串不能为空');
+        }
+        $parsed = parseDsn($dsn);
+        jsonOut(1, 'DSN 解析成功', $parsed);
+        break;
+
     case 'test_db':
-        $host = trim($_POST['db_host'] ?? 'localhost');
-        $port = (int)($_POST['db_port'] ?? 3306);
-        $user = trim($_POST['db_user'] ?? '');
-        $pass = $_POST['db_pass'] ?? '';
+        $dsn = trim($_POST['db_dsn'] ?? '');
+        if ($dsn !== '') {
+            $parsed = parseDsn($dsn);
+            $host = $parsed['db_host'];
+            $port = $parsed['db_port'];
+            $user = $parsed['db_user'];
+            $pass = $parsed['db_pass'];
+        } else {
+            $host = trim($_POST['db_host'] ?? 'localhost');
+            $port = (int)($_POST['db_port'] ?? 3306);
+            $user = trim($_POST['db_user'] ?? '');
+            $pass = $_POST['db_pass'] ?? '';
+        }
 
         if ($host === '' || $user === '') {
             jsonOut(0, '地址和用户名不能为空');
@@ -122,14 +176,25 @@ switch ($action) {
 
     case 'save_config':
         $cfg = getCurrentConfig();
-        $cfg['DB_HOST'] = trim($_POST['db_host'] ?? 'localhost');
-        $cfg['DB_PORT'] = (int)($_POST['db_port'] ?? 3306);
-        $cfg['DB_USER'] = trim($_POST['db_user'] ?? 'root');
-        $pass = $_POST['db_pass'] ?? '';
-        if ($pass !== '' && $pass !== '********') {
-            $cfg['DB_PASS'] = $pass;
+
+        $dsn = trim($_POST['db_dsn'] ?? '');
+        if ($dsn !== '') {
+            $parsed = parseDsn($dsn);
+            $cfg['DB_HOST'] = $parsed['db_host'];
+            $cfg['DB_PORT'] = $parsed['db_port'];
+            $cfg['DB_USER'] = $parsed['db_user'];
+            $cfg['DB_PASS'] = $parsed['db_pass'];
+            $cfg['DB_NAME'] = $parsed['db_name'];
+        } else {
+            $cfg['DB_HOST'] = trim($_POST['db_host'] ?? 'localhost');
+            $cfg['DB_PORT'] = (int)($_POST['db_port'] ?? 3306);
+            $cfg['DB_USER'] = trim($_POST['db_user'] ?? 'root');
+            $pass = $_POST['db_pass'] ?? '';
+            if ($pass !== '' && $pass !== '********') {
+                $cfg['DB_PASS'] = $pass;
+            }
+            $cfg['DB_NAME'] = trim($_POST['db_name'] ?? 'vps_shop');
         }
-        $cfg['DB_NAME'] = trim($_POST['db_name'] ?? 'vps_shop');
 
         if ($cfg['DB_HOST'] === '' || $cfg['DB_USER'] === '' || $cfg['DB_NAME'] === '') {
             jsonOut(0, '地址、用户名、数据库名不能为空');
@@ -145,7 +210,7 @@ switch ($action) {
         }
 
         if (!writeConfigFile($cfg)) {
-            jsonOut(0, '写入配置文件失败，请检查 api/config.php 权限');
+            jsonOut(0, '写入配置文件失败，请检查 api/config.local.php 权限');
         }
         jsonOut(1, '配置已保存');
         break;

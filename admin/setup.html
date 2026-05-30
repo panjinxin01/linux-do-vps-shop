@@ -172,18 +172,27 @@
         }
 
         // 检查安装状态
-        apiFetch('../api/check_install.php?_=' + Date.now())
-            .then(r => r.json())
-            .then(data => {
-                if (data.code === 1) {
-                    installState = data.data || {};
-                    if (!installState.config_ok || !installState.tables_ok) {
-                        window.location.replace('install.html');
-                    } else if (installState.admin_ok) {
+        (function checkAndSyncState() {
+            const urlHasExistingAdmin = new URLSearchParams(window.location.search).get('existing_admin') === '1';
+            apiFetch('../api/check_install.php?_=' + Date.now())
+                .then(r => r.json())
+                .then(data => {
+                    if (data.code === 1) {
+                        installState = data.data || {};
+                        if (!installState.config_ok || !installState.tables_ok) {
+                            window.location.replace('install.html');
+                        } else if (installState.admin_ok || urlHasExistingAdmin) {
+                            setSetupLocked(true, installState);
+                        }
+                    }
+                })
+                .catch(() => {
+                    // 网络异常时回退：如果 URL 带有 existing_admin 则仍锁定
+                    if (urlHasExistingAdmin) {
                         setSetupLocked(true, installState);
                     }
-                }
-            });
+                });
+        })();
 
         function doSetup() {
             const user = document.getElementById('username').value.trim();
@@ -256,10 +265,6 @@
                         alert(data.msg);
                     }
                 });
-        }
-
-        if (new URLSearchParams(window.location.search).get('existing_admin') === '1') {
-            setSetupLocked(true, installState);
         }
     </script>
 </body>
